@@ -1,0 +1,352 @@
+<!DOCTYPE html>
+<html lang="fa">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>ماشین حساب</title>
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#1a1c20">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --body-a:#23262b; --body-b:#1a1c20;
+    --screen-bg:#0d1912; --screen-glow:#8fffb0; --screen-dim:#3a5a45;
+    --key-face:#2e3238; --key-face-hi:#3a3f46; --key-shadow:#0f1114;
+    --key-op:#e8a33d; --key-op-hi:#f2b45a;
+    --key-eq:#5ba888; --key-eq-hi:#6fc29e;
+    --ink:#eae7de; --ink-dim:#8b8d92;
+    padding-top:env(safe-area-inset-top,0px);
+    padding-bottom:env(safe-area-inset-bottom,0px);
+  }
+  *{box-sizing:border-box;}
+  html,body{height:100%;}
+  body{
+    margin:0; display:flex; align-items:center; justify-content:center;
+    min-height:100%; background:radial-gradient(circle at 50% 20%, #2b2e33, #131417 75%);
+    font-family:'Space Grotesk',sans-serif; color:var(--ink);
+    -webkit-tap-highlight-color:transparent;
+  }
+  .unit{
+    width:320px; max-width:92vw;
+    background:linear-gradient(160deg,var(--body-a),var(--body-b));
+    border-radius:22px;
+    padding:22px 18px 26px;
+    box-shadow:
+      0 30px 60px -20px rgba(0,0,0,.7),
+      inset 0 1px 0 rgba(255,255,255,.06),
+      inset 0 -1px 0 rgba(0,0,0,.4);
+  }
+  .brand{
+    font-size:11px; letter-spacing:.12em; color:var(--ink-dim);
+    margin:0 4px 12px; display:flex; justify-content:space-between; align-items:center;
+  }
+  .hist-btn{
+    background:none; border:none; height:auto; box-shadow:none;
+    color:var(--ink-dim); font-size:11px; letter-spacing:.12em;
+    padding:2px 6px; cursor:pointer;
+  }
+  .hist-btn:active{ transform:none; color:var(--ink); }
+  .hist-panel{
+    max-height:0; overflow:hidden;
+    background:var(--screen-bg);
+    border-radius:10px;
+    transition:max-height .25s ease, margin .25s ease;
+    margin-bottom:0;
+  }
+  .hist-panel.open{ max-height:180px; margin-bottom:16px; }
+  .hist-list{
+    max-height:140px; overflow-y:auto; padding:6px 12px;
+  }
+  .hist-empty{
+    font-family:'JetBrains Mono',monospace; font-size:12px;
+    color:var(--screen-dim); padding:8px 0; text-align:center;
+  }
+  .hist-row{
+    font-family:'JetBrains Mono',monospace; font-size:13px;
+    color:var(--ink-dim); padding:6px 0; border-bottom:1px solid rgba(255,255,255,.06);
+    display:flex; justify-content:space-between; cursor:pointer;
+  }
+  .hist-row:last-child{ border-bottom:none; }
+  .hist-row .r{ color:var(--screen-glow); }
+  .hist-clear{
+    display:block; width:100%; text-align:center;
+    background:none; border:none; box-shadow:none; height:32px;
+    color:var(--key-op); font-size:12px; letter-spacing:.06em;
+    border-top:1px solid rgba(255,255,255,.06);
+  }
+  .hist-clear:active{ transform:none; opacity:.7; }
+  .sci-panel{
+    max-height:0; overflow:hidden;
+    transition:max-height .25s ease, margin .25s ease;
+    margin-bottom:0;
+  }
+  .sci-panel.open{ max-height:70px; margin-bottom:10px; }
+  .sci-row{
+    display:grid; grid-template-columns:repeat(5,1fr); gap:8px;
+  }
+  .sci-row button{
+    height:44px; font-size:14px; background:var(--key-face-hi); color:var(--ink);
+    box-shadow:0 2px 0 var(--key-shadow), inset 0 1px 0 rgba(255,255,255,.08);
+  }
+  .screen{
+    background:var(--screen-bg);
+    border-radius:10px;
+    padding:18px 16px 14px;
+    margin-bottom:16px;
+    box-shadow:inset 0 3px 10px rgba(0,0,0,.6), inset 0 0 0 1px #000;
+    overflow:hidden;
+  }
+  .screen .prev{
+    font-family:'JetBrains Mono',monospace;
+    font-size:14px; color:var(--screen-dim);
+    min-height:18px; text-align:right; white-space:nowrap; overflow:hidden;
+  }
+  .screen .main{
+    font-family:'JetBrains Mono',monospace;
+    font-size:34px; font-weight:700; text-align:right;
+    color:var(--screen-glow);
+    text-shadow:0 0 8px rgba(143,255,176,.45);
+    white-space:nowrap; overflow:hidden; letter-spacing:.5px;
+  }
+  .pad{
+    display:grid;
+    grid-template-columns:repeat(4,1fr);
+    gap:10px;
+  }
+  button{
+    border:none; cursor:pointer;
+    height:56px; border-radius:12px;
+    font-family:'Space Grotesk',sans-serif;
+    font-size:19px; font-weight:500;
+    background:var(--key-face); color:var(--ink);
+    box-shadow:
+      0 3px 0 var(--key-shadow),
+      inset 0 1px 0 rgba(255,255,255,.08);
+    transition:transform .05s ease, box-shadow .05s ease;
+  }
+  button:active{
+    transform:translateY(3px);
+    box-shadow:inset 0 1px 0 rgba(255,255,255,.08);
+  }
+  button.op{ background:var(--key-op); color:#2a1c05; box-shadow:0 3px 0 #a5701f, inset 0 1px 0 rgba(255,255,255,.25);}
+  button.op:active{ box-shadow:inset 0 1px 0 rgba(255,255,255,.2); }
+  button.fn{ color:var(--ink-dim); font-size:16px; }
+  button.eq{ background:var(--key-eq); color:#0d1912; box-shadow:0 3px 0 #3d7c60, inset 0 1px 0 rgba(255,255,255,.25); grid-row:span 2; height:auto;}
+  button.eq:active{ box-shadow:inset 0 1px 0 rgba(255,255,255,.2); }
+  button.zero{ grid-column:span 2; }
+  @media (prefers-color-scheme: light){
+    body{ background:radial-gradient(circle at 50% 20%, #2b2e33, #131417 75%); }
+  }
+</style>
+</head>
+<body>
+<div class="unit">
+  <div class="brand">
+    <span>MODEL 7</span>
+    <span>
+      <button class="hist-btn" id="sciToggle">fx</button>
+      <button class="hist-btn" id="histToggle">تاریخچه</button>
+    </span>
+  </div>
+  <div class="sci-panel" id="sciPanel">
+    <div class="sci-row">
+      <button data-fn="sqrt">√x</button>
+      <button data-fn="sin">sin</button>
+      <button data-fn="cos">cos</button>
+      <button data-fn="tan">tan</button>
+      <button data-fn="cot">cot</button>
+    </div>
+  </div>
+  <div class="hist-panel" id="histPanel">
+    <div class="hist-list" id="histList">
+      <div class="hist-empty">هنوز محاسبه‌ای ثبت نشده</div>
+    </div>
+    <button class="hist-clear" id="histClear">پاک کردن تاریخچه</button>
+  </div>
+  <div class="screen">
+    <div class="prev" id="prev">&nbsp;</div>
+    <div class="main" id="main">0</div>
+  </div>
+  <div class="pad">
+    <button class="fn" data-act="clear">AC</button>
+    <button class="fn" data-act="sign">±</button>
+    <button class="fn" data-act="percent">%</button>
+    <button class="op" data-op="÷">÷</button>
+
+    <button data-num="7">7</button>
+    <button data-num="8">8</button>
+    <button data-num="9">9</button>
+    <button class="op" data-op="×">×</button>
+
+    <button data-num="4">4</button>
+    <button data-num="5">5</button>
+    <button data-num="6">6</button>
+    <button class="op" data-op="−">−</button>
+
+    <button data-num="1">1</button>
+    <button data-num="2">2</button>
+    <button data-num="3">3</button>
+    <button class="op" data-op="+">+</button>
+
+    <button class="zero" data-num="0">0</button>
+    <button data-act="dot">.</button>
+    <button class="eq" data-act="equals">=</button>
+  </div>
+</div>
+
+<script>
+(function(){
+  const mainEl = document.getElementById('main');
+  const prevEl = document.getElementById('prev');
+  const histPanel = document.getElementById('histPanel');
+  const histToggle = document.getElementById('histToggle');
+  const histList = document.getElementById('histList');
+  const histClear = document.getElementById('histClear');
+  const sciPanel = document.getElementById('sciPanel');
+  const sciToggle = document.getElementById('sciToggle');
+  let current = '0', stored = null, op = null, justEvaluated = false;
+  let history = [];
+
+  function fmt(n){
+    if(n === Infinity || n === -Infinity || isNaN(n)) return 'Error';
+    let s = String(parseFloat(n.toPrecision(12)));
+    if(s.length > 12) s = Number(n).toExponential(5);
+    return s;
+  }
+
+  function render(){
+    mainEl.textContent = current;
+    prevEl.textContent = stored !== null ? fmt(stored) + ' ' + op : '\u00A0';
+  }
+
+  function inputNum(d){
+    if(justEvaluated){ current = '0'; justEvaluated = false; }
+    if(current === '0' && d !== '.') current = d;
+    else if(d === '.' ){ if(!current.includes('.')) current += '.'; }
+    else current += d;
+    render();
+  }
+
+  function chooseOp(o){
+    if(op && stored !== null && !justEvaluated){
+      stored = compute(stored, parseFloat(current), op);
+      current = fmt(stored);
+    } else {
+      stored = parseFloat(current);
+    }
+    op = o; justEvaluated = false; current = '0';
+    render();
+  }
+
+  function compute(a,b,o){
+    switch(o){
+      case '+': return a+b;
+      case '−': return a-b;
+      case '×': return a*b;
+      case '÷': return b === 0 ? NaN : a/b;
+    }
+  }
+
+  function renderHistory(){
+    if(history.length === 0){
+      histList.innerHTML = '<div class="hist-empty">هنوز محاسبه‌ای ثبت نشده</div>';
+      return;
+    }
+    histList.innerHTML = history.slice().reverse().map((h,i)=>{
+      const idx = history.length - 1 - i;
+      return '<div class="hist-row" data-idx="'+idx+'"><span>'+h.expr+'</span><span class="r">'+h.result+'</span></div>';
+    }).join('');
+    histList.querySelectorAll('.hist-row').forEach(row=>{
+      row.addEventListener('click', ()=>{
+        const h = history[parseInt(row.dataset.idx,10)];
+        current = h.result; stored = null; op = null; justEvaluated = true;
+        render();
+      });
+    });
+  }
+
+  function pushHistory(a,o,b,result){
+    history.push({ expr: fmt(a)+' '+o+' '+fmt(b)+' =', result: fmt(result) });
+    if(history.length > 30) history.shift();
+    renderHistory();
+  }
+
+  function equals(){
+    if(op === null) return;
+    const a = stored, b = parseFloat(current), o = op;
+    stored = compute(a, b, o);
+    current = fmt(stored);
+    pushHistory(a, o, b, stored);
+    op = null; justEvaluated = true;
+    render();
+  }
+
+  function clearAll(){ current='0'; stored=null; op=null; justEvaluated=false; render(); }
+  function sign(){ current = fmt(parseFloat(current) * -1); render(); }
+  function percent(){ current = fmt(parseFloat(current) / 100); render(); }
+
+  function applyFn(fn){
+    const x = parseFloat(current);
+    const rad = x * Math.PI / 180;
+    let result;
+    switch(fn){
+      case 'sqrt': result = x < 0 ? NaN : Math.sqrt(x); break;
+      case 'sin': result = Math.sin(rad); break;
+      case 'cos': result = Math.cos(rad); break;
+      case 'tan': {
+        const c = Math.cos(rad);
+        result = Math.abs(c) < 1e-12 ? NaN : Math.tan(rad);
+        break;
+      }
+      case 'cot': {
+        const s = Math.sin(rad);
+        result = Math.abs(s) < 1e-12 ? NaN : Math.cos(rad) / s;
+        break;
+      }
+    }
+    const label = (fn === 'sqrt' ? '√' : fn) + '(' + fmt(x) + ')';
+    current = fmt(result);
+    history.push({ expr: label + ' =', result: current });
+    if(history.length > 30) history.shift();
+    renderHistory();
+    justEvaluated = true;
+    render();
+  }
+
+  document.querySelectorAll('button[data-num]').forEach(b=>{
+    b.addEventListener('click', ()=>inputNum(b.dataset.num));
+  });
+  document.querySelector('[data-act="dot"]').addEventListener('click', ()=>inputNum('.'));
+  document.querySelectorAll('button[data-op]').forEach(b=>{
+    b.addEventListener('click', ()=>chooseOp(b.dataset.op));
+  });
+  document.querySelector('[data-act="equals"]').addEventListener('click', equals);
+  document.querySelector('[data-act="clear"]').addEventListener('click', clearAll);
+  document.querySelector('[data-act="sign"]').addEventListener('click', sign);
+  document.querySelector('[data-act="percent"]').addEventListener('click', percent);
+
+  histToggle.addEventListener('click', ()=>{
+    histPanel.classList.toggle('open');
+  });
+  histClear.addEventListener('click', ()=>{
+    history = [];
+    renderHistory();
+  });
+
+  sciToggle.addEventListener('click', ()=>{
+    sciPanel.classList.toggle('open');
+  });
+  document.querySelectorAll('button[data-fn]').forEach(b=>{
+    b.addEventListener('click', ()=>applyFn(b.dataset.fn));
+  });
+
+  render();
+  renderHistory();
+
+  if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.register('sw.js').catch(()=>{});
+  }
+})();
+</script>
+</body>
+</html>
